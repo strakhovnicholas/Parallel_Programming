@@ -9,36 +9,30 @@ public class MonteCarloAdjust{
     private double epsilon;
     private final Random random = new Random();
     private final int threshold = 80;
+    private final int threadCount = 4;
 
-    private int roll10d20() {
-        int sum = 0;
-        for (int i = 0; i < 10; i++) {
-            sum += random.nextInt(20) + 1;
+
+    public void estimateProbabilityWithProgress() throws InterruptedException {
+        int totalExperiments = (int) (1 / epsilon);
+        int experimentsPerThread = totalExperiments / threadCount;
+
+        ProgressMonitor monitor = new ProgressMonitor(totalExperiments);
+        LazyResultStorage storage = LazyResultStorage.getInstance();
+
+        Thread[] workers = new Thread[threadCount];
+
+        for (int i = 0; i < threadCount; i++) {
+            // последний поток берет остаток, если делится не ровно
+            int count = (i == threadCount - 1)
+                    ? totalExperiments - (experimentsPerThread * i)
+                    : experimentsPerThread;
+
+            MonteCarloWorker worker = new MonteCarloWorker(count, threshold, monitor, storage);
+            workers[i] = new Thread(worker);
+            workers[i].start();
         }
-        return sum;
-    }
 
-    public double estimateProbabilityWithProgress() {
-        int experiments = (int) (1 / epsilon);
-        int success = 0;
-
-        int progressSteps = 15;
-        int step = experiments / progressSteps;
-        if (step == 0) step = 1;
-
-        for (int i = 1; i <= experiments; i++) {
-            if (roll10d20() > threshold) success++;
-
-            if (i % step == 0) {
-                try {
-                    Thread.sleep(3000);
-                    double percent = 100.0 * i / experiments;
-                    System.out.printf("Прогресс: %.1f%%\n", percent);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
+        for (Thread t : workers) t.join();
 
         return (double) success / experiments;
     }
