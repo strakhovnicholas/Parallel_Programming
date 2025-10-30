@@ -2,8 +2,8 @@ package org.example.lab4;
 
 public class LazyResultStorage {
     private static volatile LazyResultStorage instance;
-    private double totalSuccess = 0;
-    private double totalExperiments = 0;
+    private static volatile double totalSuccess = 0;
+    private static volatile double totalExperiments = 0;
     private static final Object monitor = new Object();
 
     private LazyResultStorage() {
@@ -19,6 +19,15 @@ public class LazyResultStorage {
         }
         return instance;
     }
+
+    public synchronized static double getTotalExperiments() {
+        return totalExperiments;
+    }
+
+    public synchronized static double getTotalSuccess() {
+        return totalSuccess;
+    }
+
 
     public synchronized void addPartialResult(int success, int total) {
         totalSuccess += success;

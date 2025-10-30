@@ -21,18 +21,22 @@ public class MonteCarloWorker implements Runnable {
 
     @Override
     public void run() {
+        System.out.println("Поток запущен, количество операций на поток: " + this.experimentsCount);
+        int success = 0;
         for (int i = 1; i <= this.experimentsCount; i++) {
             if (roll10d20() > threshold) success++;
 
-            if (i % step == 0) {
-                try {
-                    double percent = 100.0 * i / experiments;
-                    System.out.printf("Прогресс: %.1f%%\n", percent);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+//            if (i % step == 0) {
+//                try {
+//                    double percent = 100.0 * i / experiments;
+//                    System.out.printf("Прогресс: %.1f%%\n", percent);
+//                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
         }
+        System.out.println("Поток завершил работу");
+        this.lazyResultStorage.addPartialResult(success, experimentsCount);
     }
 
     private int roll10d20() {
