@@ -1,6 +1,7 @@
 package org.example.lab4;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MonteCarloWorker implements Runnable {
     private int experimentsCount;
@@ -8,7 +9,8 @@ public class MonteCarloWorker implements Runnable {
     private final int threshold;
     private final ProgressMonitor progressMonitor;
     private final LazyResultStorage lazyResultStorage;
-
+    private static AtomicInteger counter = new AtomicInteger(0);
+    private final int id;
 
     public MonteCarloWorker(int experimentsCount, int threshold, ProgressMonitor progressMonitor,
                             LazyResultStorage lazyResultStorage) {
@@ -16,26 +18,18 @@ public class MonteCarloWorker implements Runnable {
         this.threshold = threshold;
         this.progressMonitor = progressMonitor;
         this.lazyResultStorage = lazyResultStorage;
+        this.id = counter.getAndIncrement();
 
     }
 
     @Override
     public void run() {
-        System.out.println("Поток запущен, количество операций на поток: " + this.experimentsCount);
+        System.out.printf("Поток %d запущен, количество операций на поток: %d \n",this.id, this.experimentsCount);
         int success = 0;
         for (int i = 1; i <= this.experimentsCount; i++) {
             if (roll10d20() > threshold) success++;
-
-//            if (i % step == 0) {
-//                try {
-//                    double percent = 100.0 * i / experiments;
-//                    System.out.printf("Прогресс: %.1f%%\n", percent);
-//                } catch (InterruptedException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
         }
-        System.out.println("Поток завершил работу");
+        System.out.printf("Поток %d завершил работу \n", this.id);
         this.lazyResultStorage.addPartialResult(success, experimentsCount);
     }
 

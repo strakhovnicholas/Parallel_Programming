@@ -2,16 +2,23 @@ package org.example.lab4;
 
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class MonteCarloAdjust{
+public class MonteCarloAdjust implements Runnable{
     private double epsilon;
     private final Random random = new Random();
     private final int threshold = 80;
     private final int threadCount = 4;
-
+    private static AtomicInteger counter = new AtomicInteger(0);
+    private final int id;
 
     public MonteCarloAdjust(double epsilon){
         this.epsilon = epsilon;
+        this.id = counter.getAndIncrement();
+    }
+
+    public int getId() {
+        return id;
     }
 
     private double estimateProbabilityWithProgress() throws InterruptedException {
@@ -34,10 +41,10 @@ public class MonteCarloAdjust{
             MonteCarloWorker worker = new MonteCarloWorker(count, threshold, monitor, storage);
             workers[i] = new Thread(worker);
             workers[i].start();
-            workers[i].join();
         }
 
-//        for (Thread t : workers) t.join();
+        for (Thread t : workers)
+            t.join();
 
         return storage.getProbability();
     }
@@ -51,34 +58,44 @@ public class MonteCarloAdjust{
 
         probability = estimateProbabilityWithProgress();
         System.out.println("Вероятность: " + probability);
-//        while (true) {
-//            long start = System.currentTimeMillis();
-//            probability = estimateProbabilityWithProgress();
-//            long end = System.currentTimeMillis();
-//
-//            timeSec = (end - start) / 1000.0;
-//            int iterations = (int) (1 / epsilon);
-//
-//            System.out.printf("ε = %.1e (%d итераций) → Время = %.2f с%n",
-//                    epsilon, iterations, timeSec);
-//
-//            if (timeSec >= minTime && timeSec <= maxTime) {
-//                System.out.println("\nПодходящее значение найдено!");
-//                System.out.printf("Результат: ε = %.1e → P(sum>80)=%.5f | Время = %.2f с%n",
-//                        epsilon, probability, timeSec);
-//                break;
-//            }
-//
-//            if (timeSec < minTime) {
-//                epsilon /= 2;
-//            } else if (timeSec > maxTime) {
-//                epsilon *= 2;
-//            }
-//
-//            if (epsilon < 1e-9 || epsilon > 1e-1) {
-//                System.out.println("\n Не удалось подобрать подходящую погрешность в разумных пределах.");
-//                break;
-//            }
-//        }
+        while (true) {
+            long start = System.currentTimeMillis();
+            probability = estimateProbabilityWithProgress();
+            long end = System.currentTimeMillis();
+
+            timeSec = (end - start) / 1000.0;
+            int iterations = (int) (1 / epsilon);
+
+            System.out.printf("ε = %.1e (%d итераций) → Время = %.2f с%n",
+                    epsilon, iterations, timeSec);
+
+            if (timeSec >= minTime && timeSec <= maxTime) {
+                System.out.println("\nПодходящее значение найдено!");
+                System.out.printf("Результат: ε = %.1e → P(sum>80)=%.5f | Время = %.2f с%n",
+                        epsilon, probability, timeSec);
+                break;
+            }
+
+            if (timeSec < minTime) {
+                epsilon /= 2;
+            } else if (timeSec > maxTime) {
+                epsilon *= 2;
+            }
+
+            if (epsilon < 1e-9 || epsilon > 1e-1) {
+                System.out.println("\n Не удалось подобрать подходящую погрешность в разумных пределах.");
+                break;
+            }
+        }
+    }
+
+    @Override
+    public void run() {
+        try {
+            tuneEpsilon();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
     }
 }
