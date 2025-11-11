@@ -1,4 +1,4 @@
-package org.example.lab4;
+package org.example.lab;
 
 public class ConsolePrinter {
 
