@@ -4,10 +4,7 @@ package org.example.lab;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MonteCarloAdjust{
@@ -23,26 +20,27 @@ public class MonteCarloAdjust{
         this.id = counter.getAndIncrement();
     }
 
-    public int getId() {
-        return id;
-    }
 
     private double estimateProbabilityWithProgressFuture() throws InterruptedException, ExecutionException {
         int totalExperiments = (int) (1 / this.epsilon);
 
         int batchSize = 300_000;
-        int totalBatches = (totalExperiments + batchSize - 1) / batchSize;
+        int totalBatches = (int) Math.ceil((double) totalExperiments / batchSize);
+
+        long[] completionTimes = new long[totalBatches];
+        CountDownLatch latch = new CountDownLatch(totalBatches);
 
         ProgressMonitor monitor = new ProgressMonitor(totalExperiments);
         LazyResultStorage storage = LazyResultStorage.getInstance();
 
         ExecutorService executor = Executors.newFixedThreadPool(this.threadCount);
+        Semaphore semaphore = new Semaphore(this.threadCount);
         List<Future<ExperimentResult>> futures = new ArrayList<>();
 
         for (int i = 0; i < totalBatches; i++) {
             int currentBatchSize = Math.min(batchSize, totalExperiments - i * batchSize);
 
-            MonteCarloWorker worker = new MonteCarloWorker(currentBatchSize, threshold, monitor);
+            MonteCarloWorker worker = new MonteCarloWorker(currentBatchSize, threshold, monitor, completionTimes, latch, i, semaphore);
             futures.add(executor.submit(worker));
         }
 
@@ -51,8 +49,24 @@ public class MonteCarloAdjust{
             storage.addPartialResult(result.getSuccess(), result.getTotal());
         }
 
+        latch.await();
+
+        this.countDelay(completionTimes);
+
         executor.shutdown();
         return storage.getProbability();
+    }
+
+    private void countDelay(long[] completionTimes) {
+        long maxCompletion = 0L;
+        for (long t : completionTimes) {
+            if (t > maxCompletion) maxCompletion = t;
+        }
+
+        for (int i = 0; i < completionTimes.length; i++) {
+            long delayMs = maxCompletion - completionTimes[i];
+            System.out.println("Worker " + i + " задержка: " + delayMs + "ms");
+        }
     }
 
     public void tuneEpsilon() throws InterruptedException, ExecutionException {
