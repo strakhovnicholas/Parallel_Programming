@@ -1,6 +1,4 @@
-package org.example;
-
-import org.example.lab.MonteCarloAdjust;
+package org.example.lab;
 
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
