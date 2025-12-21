@@ -1,9 +1,9 @@
 package org.example.lab9;
 
-import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,18 +14,22 @@ public class Order {
     private Map<Item, Integer> requestedItems;
     private Map<Item, Integer> fulfilledItems;
     private Map<Item, Integer> pendingItems;
-    private BigDecimal totalPrice;
+    private BigDecimal totalPrice = BigDecimal.ZERO;
+    private BigDecimal blockedAmount = BigDecimal.ZERO;
     private OrderStatus status;
 
-    public Order(UUID clientId){
+    public Order(UUID clientId, Map<Item, Integer> requestedItems) {
         this.clientId = clientId;
+        this.requestedItems = new HashMap<>(requestedItems);
+        this.fulfilledItems = new HashMap<>();
+        this.pendingItems = new HashMap<>();
         this.status = OrderStatus.PENDING;
     }
 
-    private enum OrderStatus {
+    public enum OrderStatus {
         PENDING,
         PARTIAL,
         COMPLETED,
-        CANCELLED;
+        CANCELLED
     }
 }

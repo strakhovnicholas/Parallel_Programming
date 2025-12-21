@@ -15,7 +15,7 @@ public interface OnlineStoreAPI {
 
     boolean cancelOrder(UUID clientId, UUID orderId);
 
-    Integer getStoreStatus();
+    Map<Item, Integer> getStoreStatus();
 
     void deliverGoods(Map<Item, Integer> items);
 }
